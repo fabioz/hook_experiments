@@ -1,40 +1,46 @@
 #include <iostream>
+#include <MinHook.h>
+
+extern "C" {
+
 #include "check_minhook.h"
 
+typedef enum { PyGILState_LOCKED, PyGILState_UNLOCKED } PyGILState_STATE;
+
+typedef PyGILState_STATE PyGILState_EnsureFunc(void);
+
+PyGILState_EnsureFunc *pPyGILState_Ensure = NULL;
+PyGILState_STATE Detour_PyGILState_Ensure()
+{
+    std::cout << "Detour_PyGILState_Ensure called." << std::endl << std::flush;
+    PyGILState_STATE state = pPyGILState_Ensure();
+    return state;
+}
+
 DECLDIR int PatchPyGILState_Ensure(bool showDebugInfo) {
-
-    return 0;
-    // ModuleInfo moduleInfo = GetPythonModule();
-    // if (moduleInfo.errorGettingModule != 0) {
-    //     return moduleInfo.errorGettingModule;
-    // }
-    // HMODULE module = moduleInfo.module;
-    // if (showDebugInfo) {
-    //     std::cout << "Setting sys trace for existing threads." << std::endl << std::flush;
-    // }
-
+    std::cout << "PatchPyGILState_Ensure called" << std::endl;
+    MH_STATUS status = MH_Initialize();
     
-    // DEFINE_PROC(gilEnsure, PyGILState_Ensure*, "PyGILState_Ensure", 0);
-    // MH_STATUS status = MH_Initialize();
-    
-    // if (status != MH_OK) {
-    //     if (showDebugInfo) {
-    //         std::cout << "Error initializing minhook." << std::endl << std::flush;
-    //     }
-    //     return status;
-    // }
+    if (status != MH_OK) {
+        if (showDebugInfo) {
+            std::cout << "Error initializing minhook." << std::endl << std::flush;
+        }
+        return status;
+    }
 
-    // status = MH_CreateHookApi(L"python37.dll", "PyGILState_Ensure", reinterpret_cast<void*>(&Detour_PyGILState_Ensure), reinterpret_cast<LPVOID*>(&pPyGILState_Ensure));
-    // if (status != MH_OK) {
-    //     if (showDebugInfo) {
-    //         std::cout << "Error creating hook API." << std::endl << std::flush;
-    //     }
-    //     return status;
-    // }
+    status = MH_CreateHookApi(L"python37.dll", "PyGILState_Ensure", reinterpret_cast<void*>(&Detour_PyGILState_Ensure), reinterpret_cast<LPVOID*>(&pPyGILState_Ensure));
+    if (status != MH_OK) {
+        if (showDebugInfo) {
+            std::cout << "Error creating hook API." << std::endl << std::flush;
+        }
+        return status;
+    }
     
-    // if (showDebugInfo) {
-    //     std::cout << "minhook applied ok." << std::endl << std::flush;
-    // }
+    if (showDebugInfo) {
+        std::cout << "MinHook applied ok." << std::endl << std::flush;
+    }
 
-    // return MH_EnableHook(MH_ALL_HOOKS);
+    return MH_EnableHook(MH_ALL_HOOKS);
+}
+
 }
